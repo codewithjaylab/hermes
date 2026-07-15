@@ -16,13 +16,17 @@
 $ErrorActionPreference = "Stop"
 
 # ── Config ─────────────────────────────────────────────────────
-$secrets = @(
-    "DEEPSEEK_API_KEY"
-    "OPENROUTER_API_KEY"   # uncomment if using OpenRouter
-    "NOVITA_API_KEY"
-    # "ANTHROPIC_API_KEY"    # uncomment if using Anthropic direct
-    # "GOOGLE_API_KEY"       # uncomment if using Gemini
-)
+# Secrets are read from gsm-secrets.conf (one per line, # for comments)
+$configFile = Join-Path $PSScriptRoot "gsm-secrets.conf"
+
+if (Test-Path $configFile) {
+    $secrets = Get-Content $configFile | Where-Object {
+        $_ -notmatch '^\s*#' -and $_ -notmatch '^\s*$'
+    } | ForEach-Object { $_.Trim() }
+} else {
+    Write-Host "[hermes-gsm] ERROR: Config file not found: $configFile" -ForegroundColor Red
+    exit 1
+}
 
 $hermesPath = "C:\Users\e4dev\AppData\Local\hermes\hermes-agent\venv\Scripts\hermes.exe"
 
