@@ -23,7 +23,7 @@ HERMES_EXE="C:/Users/e4dev/AppData/Local/hermes/hermes-agent/venv/Scripts/hermes
 # Add/remove secrets for the providers you use.
 SECRETS=(
     "DEEPSEEK_API_KEY"
-    # "OPENROUTER_API_KEY"   # uncomment if using OpenRouter
+     "OPENROUTER_API_KEY"   # uncomment if using OpenRouter
     # "ANTHROPIC_API_KEY"    # uncomment if using Anthropic direct
     # "GOOGLE_API_KEY"       # uncomment if using Gemini
 )

@@ -18,7 +18,7 @@ $ErrorActionPreference = "Stop"
 # ── Config ─────────────────────────────────────────────────────
 $secrets = @(
     "DEEPSEEK_API_KEY"
-    # "OPENROUTER_API_KEY"   # uncomment if using OpenRouter
+     "OPENROUTER_API_KEY"   # uncomment if using OpenRouter
     # "ANTHROPIC_API_KEY"    # uncomment if using Anthropic direct
     # "GOOGLE_API_KEY"       # uncomment if using Gemini
 )
