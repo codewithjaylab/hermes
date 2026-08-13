@@ -15,16 +15,30 @@ setlocal enabledelayedexpansion
 
 set HERMES_PATH=C:\Users\e4dev\AppData\Local\hermes\hermes-agent\venv\Scripts\hermes.exe
 
-echo [hermes-gsm] Fetching secrets from Google Secret Manager...
+REM ── Resolve config file relative to script location ────────────
+set SCRIPT_DIR=%~dp0
+set CONFIG_FILE=%SCRIPT_DIR%gsm-secrets.conf
 
-REM ── DEEPSEEK_API_KEY ─────────────────────────────────────────
-for /f "delims=" %%i in ('gcloud secrets versions access latest --secret^=DEEPSEEK_API_KEY 2^>nul') do (
-    set "DEEPSEEK_API_KEY=%%i"
-    echo [hermes-gsm]   OK DEEPSEEK_API_KEY loaded
+if not exist "%CONFIG_FILE%" (
+    echo [hermes-gsm] ERROR: Config file not found: %CONFIG_FILE%
+    exit /b 1
 )
 
-REM ── OPENROUTER_API_KEY (uncomment if using OpenRouter) ───────
-REM for /f "delims=" %%i in ('gcloud secrets versions access latest --secret^=OPENROUTER_API_KEY 2^>nul') do set "OPENROUTER_API_KEY=%%i"
+echo [hermes-gsm] Fetching secrets from %CONFIG_FILE%...
+
+REM ── Read secrets from config and fetch from GSM ────────────────
+for /f "usebackq eol=# tokens=*" %%s in ("%CONFIG_FILE%") do (
+    if not "%%s" == "" (
+        for /f "delims=" %%i in ('gcloud secrets versions access latest --secret^=%%s 2^>nul') do (
+            set "%%s=%%i"
+        )
+        if !ERRORLEVEL! EQU 0 (
+            echo [hermes-gsm]   OK %%s loaded
+        ) else (
+            echo [hermes-gsm]   WARN Could not fetch '%%s' -- skipping
+        )
+    )
+)
 
 echo [hermes-gsm] Launching Hermes...
 echo.

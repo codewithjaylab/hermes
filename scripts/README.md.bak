@@ -38,8 +38,6 @@ function hermes { & "C:\workspace\hermes\scripts\hermes-gsm.ps1" @args }
 **Bash (`~/.bashrc` or `~/.zshrc`):**
 ```bash
 alias hermes='/path/to/hermes-gsm.sh'
-
-e.g = /c/workspace/hermes/scripts/hermes-gsm.sh
 ```
 
 ## Usage
@@ -59,60 +57,8 @@ hermes-gsm --resume my-session-id
 
 ## Configuration
 
-All three scripts read their secret names from a single flat-file config: **`gsm-secrets.conf`**
-
-To add or remove API keys, edit that file — one secret name per line:
-
-```
-# ── API Keys from Google Secret Manager ──
-DEEPSEEK_API_KEY
-OPENROUTER_API_KEY
-NOVITA_API_KEY
-# GOOGLE_API_KEY       # commented out — won't be fetched
-```
-
-- Lines starting with `#` are comments (ignored)
-- Blank lines are ignored
-- Changes take effect on next launch — no need to touch the scripts themselves
+The scripts are pre-configured to fetch `DEEPSEEK_API_KEY`. To add more secrets (like `OPENROUTER_API_KEY` or `ANTHROPIC_API_KEY`), edit the `SECRETS` array/list inside the scripts and uncomment the relevant lines.
 
 > **Note:** The scripts assume Hermes is installed at:
 > `C:\Users\e4dev\AppData\Local\hermes\hermes-agent\venv\Scripts\hermes.exe`
 > If your installation path is different, update the `HERMES_EXE` / `HERMES_PATH` variable inside each script.
-
-## Global VS Code Integration
-
-To run Hermes dynamically from any VS Code project workspace with automatic environment injection from Google Secret Manager, configure a Global User Task.
-
-On Windows, the global VS Code task configuration file is located at:
-`%APPDATA%\Code\User\tasks.json`
-
-Append the following JSON payload into your global tasks configuration:
-
-```json
-{
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "Launch Hermes with GSM",
-            "type": "shell",
-            "command": "C:/workspace/hermes/scripts/hermes-gsm.cmd",
-            "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": [],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "presentation": {
-                "echo": true,
-                "reveal": "always",
-                "focus": true,
-                "panel": "dedicated",
-                "showReuseMessage": false,
-                "clear": true
-            }
-        }
-    ]
-}
-```
