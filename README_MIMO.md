@@ -1,6 +1,6 @@
-# Xiaomi MiMo Configuration Guide for Hermes Agent
+# Xiaomi MiMo Configuration Guide for Hermes Agent (Multi-Provider Setup)
 
-This guide outlines how to configure **Xiaomi MiMo** models (specifically for Token Plan users) in **Hermes Agent** on Windows.
+This guide outlines how to configure **Xiaomi MiMo** as a custom provider in **Hermes Agent** alongside your existing providers (OpenRouter, DeepSeek, Google, etc.) on Windows.
 
 ## File Paths
 
@@ -10,45 +10,55 @@ On Windows, the configuration files are located at:
 
 ---
 
-## Configuration Options
+## Configuration Step-by-Step
 
-Choose one of the following protocols to integrate Xiaomi MiMo into Hermes Agent:
+To avoid breaking your default models (like OpenRouter or DeepSeek), add Xiaomi MiMo as a custom provider inside the `providers` block.
 
-### Option A: OpenAI Compatible Protocol (Recommended)
+### 1. Update `config.yaml`
 
-1. Open `config.yaml` and update the top `model` section:
-   ```yaml
-   model:
-     default: openai/mimo-v2.5-pro
-     provider: openai
-     base_url: https://token-plan-sgp.xiaomimimo.com/v1
-   ```
+Open `config.yaml` and configure it to match the structure below. Keep your default `model` settings at the top, and add `mimo` under the `providers` key:
 
-2. Open `.env` and add your Token Plan API key (should start with `tp-`):
-   ```env
-   OPENAI_API_KEY=tp-your_token_plan_key_here
-   ```
+```yaml
+model:
+  default: anthropic/claude-opus-4.6   # Your default OpenRouter model
+  provider: auto
+  base_url: https://openrouter.ai/api/v1
 
-### Option B: Anthropic Compatible Protocol
+providers:
+  mimo:
+    base_url: "https://token-plan-sgp.xiaomimimo.com/v1"
+    key_env: "MIMO_API_KEY"
+```
 
-1. Open `config.yaml` and update the top `model` section:
-   ```yaml
-   model:
-     default: anthropic/mimo-v2.5-pro
-     provider: anthropic
-     base_url: https://token-plan-sgp.xiaomimimo.com/anthropic
-   ```
+### 2. Update `.env`
 
-2. Open `.env` and add your Token Plan API key (should start with `tp-`):
-   ```env
-   ANTHROPIC_API_KEY=tp-your_token_plan_key_here
-   ```
+Open your `.env` file and add the `MIMO_API_KEY` alongside your existing credentials:
+
+```env
+MIMO_API_KEY=tp-your_token_plan_key_here
+DEEPSEEK_API_KEY=your_deepseek_key_here
+OPENROUTER_API_KEY=your_openrouter_key_here
+```
+
+*(Note: If you use Google Secret Manager (GSM), make sure to upload `MIMO_API_KEY` as a secret and update your launch script to load it.)*
 
 ---
 
-## Verification
+## How to Run Different Models
 
-After saving both files, restart your Hermes Agent session or terminal. You can run the following command to test connectivity:
-```powershell
-hermes chat --message "Hello"
-```
+Now that all providers are configured simultaneously, you can run them using the `--model` flag:
+
+* **Use Default Model (OpenRouter/Claude):**
+  ```powershell
+  hermes chat
+  ```
+
+* **Use Xiaomi MiMo:**
+  ```powershell
+  hermes chat --model mimo/mimo-v2.5-pro
+  ```
+
+* **Use DeepSeek:**
+  ```powershell
+  hermes chat --model deepseek/deepseek-chat
+  ```
