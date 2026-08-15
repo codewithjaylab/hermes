@@ -18,6 +18,29 @@ To avoid breaking your default models (like OpenRouter or DeepSeek), add Xiaomi 
 
 Open `config.yaml` and configure it to match the structure below. Keep your default `model` settings at the top, and add `mimo` under the `providers` key:
 
+#### For Windows
+
+
+```yaml
+C:\Users\e4dev\AppData\Local\hermes
+```
+
+```yaml
+ /c/users/e4dev/AppData/Local/hermes
+```
+
+
+
+
+
+
+```yaml
+model:
+  default: mimo-v2.5-pro
+  provider: mimo
+  base_url: '' 
+```
+
 ```yaml
 model:
   default: anthropic/claude-opus-4.6   # Your default OpenRouter model
@@ -28,6 +51,26 @@ providers:
   mimo:
     base_url: "https://token-plan-sgp.xiaomimimo.com/v1"
     key_env: "MIMO_API_KEY"
+```
+
+
+
+### Ollama configuration
+
+```yaml
+model:
+  default: gemma4:latest
+  provider: ollama-local
+  base_url: http://127.0.0.1:11434/v1
+providers:
+  ollama-local:
+    name: Ollama-local
+    base_url: http://127.0.0.1:11434/v1
+    model: gemma4:latest
+    discover_models: true
+    models:
+
+    
 ```
 
 ### 2. Update `.env`
