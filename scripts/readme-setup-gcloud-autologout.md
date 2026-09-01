@@ -30,7 +30,17 @@ GCLOUD_AUTOLOGOUT_DELAY=off hermes   # disable auto-logout
 ./hermes-gsm-gcloud-logout.sh 4h     # standalone: revoke in 4h
 ./hermes-gsm-gcloud-logout.sh now    # standalone: revoke immediately
 DRY_RUN=1 ./hermes-gsm-gcloud-logout.sh now   # preview, no revoke
+./hermes-gsm-gcloud-logout.sh        # interactive menu (run in a terminal)
+./hermes-gsm-gcloud-logout.sh -i     # force interactive (even without a TTY)
+./hermes-gsm-gcloud-logout.sh -i 90m # interactive, delay pre-set to 90m
 ```
+
+The interactive menu asks (1) what to do — revoke now / in 2 minutes / in 2
+hours / custom delay (e.g. `30s`, `45m`, `2h`, `3600`) / cancel — and then
+(2) whether to really revoke (commit) or dry-run (preview only). A scheduled
+interactive delay is handed to a background job so the terminal is not
+blocked. The launcher always passes an explicit delay argument, so the menu
+never triggers on a normal `hermes` launch.
 
 Accepted delay formats: `30s`, `45m`, `2h`, `1d`, plain seconds (`3600`),
 `now` (immediate), `off`/`none` (no-op).

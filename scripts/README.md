@@ -35,6 +35,9 @@ Google Secret Manager don't stay active indefinitely.
 - Disable with: `GCLOUD_AUTOLOGOUT_DELAY=off hermes`.
 - The helper can also be run standalone: `./hermes-gsm-gcloud-logout.sh 4h`
   schedules a revoke 4 hours from now; `now` revokes immediately.
+- Interactive mode: run with no arguments from a terminal (or add `-i`) for a
+  menu — revoke now / in 2 minutes / in 2 hours / custom delay / cancel, then
+  choose dry-run (preview) or real revoke.
 - It revokes both `gcloud auth` user accounts and Application Default
   Credentials (`gcloud auth application-default revoke`).
 - Output is appended to `scripts/gcloud-autologout.log` (git-ignored).
