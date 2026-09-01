@@ -71,6 +71,17 @@ for secret_name in "${SECRETS[@]}"; do
     echo "[hermes-gsm]   OK $secret_name loaded"
 done
 
+# ── Schedule gcloud auto-logout ────────────────────────────────
+# Close the gcloud session shortly after launch so the credentials used
+# to fetch the secrets don't stay active. Override the delay with the
+# env var GCLOUD_AUTOLOGOUT_DELAY (e.g. "90m", "4h"); "off" disables.
+GCLOUD_AUTOLOGOUT_DELAY="${GCLOUD_AUTOLOGOUT_DELAY:-2h}"
+if [[ -n "$GCLOUD_AUTOLOGOUT_DELAY" && "$GCLOUD_AUTOLOGOUT_DELAY" != "off" ]]; then
+    nohup "$SCRIPT_DIR/hermes-gsm-gcloud-logout.sh" "$GCLOUD_AUTOLOGOUT_DELAY" \
+        >>"$SCRIPT_DIR/gcloud-autologout.log" 2>&1 &
+    echo "[hermes-gsm] gcloud session auto-close scheduled in $GCLOUD_AUTOLOGOUT_DELAY (pid $!)"
+fi
+
 echo "[hermes-gsm] Launching Hermes..."
 echo ""
 

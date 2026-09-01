@@ -20,6 +20,26 @@ This prevents storing sensitive API keys in local environment variables or `.env
 | **Windows** | `hermes-gsm.cmd` | Command Prompt (CMD) |
 | **Windows** | `hermes-gsm.ps1` | PowerShell |
 | **Linux / macOS / Windows (Git Bash)** | `hermes-gsm.sh` | Bash |
+| **Linux / macOS** | `hermes-gsm-ubuntu.sh` | Bash |
+| **Any (helper)** | `hermes-gsm-gcloud-logout.sh` | Bash |
+
+## Auto-Logout (gcloud session)
+
+`hermes-gsm-ubuntu.sh` schedules a background job that closes the gcloud
+session shortly after launch, so the credentials used to fetch secrets from
+Google Secret Manager don't stay active indefinitely.
+
+- Default delay: **2 hours** after launch.
+- Override with the environment variable: `GCLOUD_AUTOLOGOUT_DELAY=90m hermes`
+  (accepts `30s`, `45m`, `2h`, `1d`, or plain seconds).
+- Disable with: `GCLOUD_AUTOLOGOUT_DELAY=off hermes`.
+- The helper can also be run standalone: `./hermes-gsm-gcloud-logout.sh 4h`
+  schedules a revoke 4 hours from now; `now` revokes immediately.
+- It revokes both `gcloud auth` user accounts and Application Default
+  Credentials (`gcloud auth application-default revoke`).
+- Output is appended to `scripts/gcloud-autologout.log` (git-ignored).
+- Dry-run for testing: `DRY_RUN=1 ./hermes-gsm-gcloud-logout.sh now` prints the
+  commands without revoking anything.
 
 ## Installation
 
