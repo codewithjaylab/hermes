@@ -62,7 +62,8 @@ Added to `~/.zshrc` (under the existing `# Aliases` block):
 
 ```bash
 # Hermes: override 'hermes' to fetch API keys from Google Secret Manager first
-alias hermes='/home/sdkjqg/workspace/hermes-sdkjqg/hermes/scripts/hermes-gsm-ubuntu.sh'
+export HERMES="$HOME/workspace/hermes"
+alias hermes='$HERMES/scripts/hermes-gsm-ubuntu.sh'
 ```
 
 Applied with the `patch` tool (targeted replace of the `# Aliases` block in `~/.zshrc`).
@@ -79,8 +80,9 @@ No recursion: the alias only expands in the interactive zsh shell, not inside th
 
 ```bash
 # Confirm the alias resolves correctly (interactive zsh)
-zsh -ic 'alias hermes'
-# → hermes=/home/sdkjqg/workspace/hermes-sdkjqg/hermes/scripts/hermes-gsm-ubuntu.sh
+zsh -ic 'alias hermes; echo "HERMES=$HERMES"'
+# → hermes='$HERMES/scripts/hermes-gsm-ubuntu.sh'
+#   HERMES=/home/sdkjqg/workspace/hermes
 
 # Reload config in the current terminal, then launch
 source ~/.zshrc
@@ -98,8 +100,8 @@ Expected output on launch:
 ### Reverting
 
 ```bash
-# Remove the alias line from ~/.zshrc, then reload
-sed -i '/alias hermes=.*hermes-gsm-ubuntu.sh/d' ~/.zshrc
+# Remove the alias lines (HERMES export + alias) from ~/.zshrc, then reload
+sed -i '/export HERMES=.*workspace\/hermes/d; /alias hermes=.*hermes-gsm-ubuntu.sh/d' ~/.zshrc
 source ~/.zshrc
 ```
 

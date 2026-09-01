@@ -29,13 +29,14 @@ hermes                  →  fetches API keys from Google Secret Manager
 
 2. **Read the current shell config** — `~/.zshrc` to find the existing structure (Aliases block, oh-my-zsh, p10k).
 
-3. **Applied a targeted edit** — the `patch` tool replaced the existing `# Aliases` block to add one line:
+3. **Applied a targeted edit** — the `patch` tool replaced the existing `# Aliases` block to add the alias, later refined to use a `HERMES` variable so the path stays portable across machines/renames:
 
    ```diff
    # Aliases
    alias fd=fdfind
    +# Hermes: override 'hermes' to fetch API keys from Google Secret Manager first
-   +alias hermes='/home/sdkjqg/workspace/hermes-sdkjqg/hermes/scripts/hermes-gsm-ubuntu.sh'
+   +export HERMES="$HOME/workspace/hermes"
+   +alias hermes='$HERMES/scripts/hermes-gsm-ubuntu.sh'
    ```
 
    (Used `patch` instead of `sed`/manual editing — a find-and-replace on the unique `# Aliases` block, so no accidental damage to the rest of the file.)
@@ -43,8 +44,9 @@ hermes                  →  fetches API keys from Google Secret Manager
 4. **Verified the alias loads** — ran an interactive zsh check:
 
    ```bash
-   zsh -ic 'alias hermes'
-   # → hermes=/home/sdkjqg/workspace/hermes-sdkjqg/hermes/scripts/hermes-gsm-ubuntu.sh
+   zsh -ic 'alias hermes; echo "HERMES=$HERMES"'
+   # → hermes='$HERMES/scripts/hermes-gsm-ubuntu.sh'
+   #   HERMES=/home/sdkjqg/workspace/hermes
    ```
 
 5. **Activated it** — the alias takes effect in new terminals automatically; for the current session: `source ~/.zshrc`.
@@ -75,7 +77,8 @@ chmod +x hermes-gsm-ubuntu.sh
 cp gsm-secrets.conf.example gsm-secrets.conf   # or edit gsm-secrets.conf
 
 # 4. Add the alias to your shell config (zsh shown; bash users use ~/.bashrc)
-echo "alias hermes='$PWD/hermes-gsm-ubuntu.sh'" >> ~/.zshrc
+echo "export HERMES=\"\$HOME/workspace/hermes\"" >> ~/.zshrc
+echo "alias hermes='\$HERMES/scripts/hermes-gsm-ubuntu.sh'" >> ~/.zshrc
 source ~/.zshrc
 ```
 
@@ -84,8 +87,8 @@ Prerequisites: `gcloud` SDK on `PATH` + `gcloud auth application-default login`,
 ## Revert
 
 ```bash
-# Remove the alias line, then reload
-sed -i '/alias hermes=.*hermes-gsm-ubuntu.sh/d' ~/.zshrc
+# Remove the alias lines (HERMES export + alias), then reload
+sed -i '/export HERMES=.*workspace\/hermes/d; /alias hermes=.*hermes-gsm-ubuntu.sh/d' ~/.zshrc
 source ~/.zshrc
 ```
 
