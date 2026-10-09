@@ -13,7 +13,9 @@ REM   - gcloud auth application-default login (for ADC)
 
 setlocal enabledelayedexpansion
 
-set HERMES_PATH=C:\Users\e4dev\AppData\Local\hermes\hermes-agent\venv\Scripts\hermes.exe
+REM NOTE: hermes.exe is blocked by Device Guard (WDAC) on this host,
+REM so we launch the CLI through the Python interpreter instead.
+set PYTHON_EXE=C:\Users\e4dev\AppData\Local\hermes\hermes-agent\venv\Scripts\python.exe
 
 REM ── Resolve config file relative to script location ────────────
 set SCRIPT_DIR=%~dp0
@@ -54,5 +56,5 @@ if !ERRORLEVEL! EQU 0 (
 )
 
 REM ── Launch Hermes ────────────────────────────────────────────
-"%HERMES_PATH%" %*
+"%PYTHON_EXE%" -m hermes_cli.main %*
 exit /b %ERRORLEVEL%

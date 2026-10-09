@@ -17,7 +17,7 @@
 
 set -euo pipefail
 
-HERMES_EXE="C:/Users/e4dev/AppData/Local/hermes/hermes-agent/venv/Scripts/hermes.exe"
+PYTHON_EXE="/c/Users/e4dev/AppData/Local/hermes/hermes-agent/venv/Scripts/python.exe"
 
 # ── Config ─────────────────────────────────────────────────────
 # Secrets are read from gsm-secrets.conf (one per line, # for comments)
@@ -56,8 +56,8 @@ if [[ ${#SECRETS[@]} -eq 0 ]]; then
     exit 1
 fi
 
-if [[ ! -f "$HERMES_EXE" ]]; then
-    echo "[hermes-gsm] ERROR: Hermes binary not found: $HERMES_EXE"
+if [[ ! -f "$PYTHON_EXE" ]]; then
+    echo "[hermes-gsm] ERROR: Python binary not found: $PYTHON_EXE"
     exit 1
 fi
 
@@ -83,4 +83,4 @@ echo "[hermes-gsm] Launching Hermes..."
 echo ""
 
 # ── Launch Hermes ──────────────────────────────────────────────
-exec "$HERMES_EXE" "$@"
+exec "$PYTHON_EXE" -m hermes_cli.main "$@"
