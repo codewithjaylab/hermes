@@ -119,7 +119,7 @@ gcloud projects add-iam-policy-binding brave-monitor-498704-c0 \
 #
 # Usage:
 #   hermes-gsm                    # interactive chat
-#   hermes-gsm -q "pregunta"      # single query
+#   hermes-gsm -z "pregunta"      # single query (-z is the top-level flag; -q only exists under `hermes chat`)
 #   hermes-gsm --resume sesion    # resume session
 #
 # Prerequisites:
@@ -235,7 +235,7 @@ gcloud auth application-default print-access-token > nul && echo "ADC OK" || ech
 gcloud secrets versions access latest --secret=DEEPSEEK_API_KEY > nul && echo "GSM OK"
 
 # 3. Lanzar Hermes via wrapper
-hermes-gsm.sh -q "responde 'ok' si puedes leer este mensaje"
+hermes-gsm.sh -z "responde 'ok' si puedes leer este mensaje"
 ```
 
 ### 4.2 Check de seguridad

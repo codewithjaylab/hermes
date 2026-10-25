@@ -45,13 +45,24 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="$SCRIPT_DIR/gsm-secrets.conf"
 
+# Trim leading/trailing whitespace, including CR from CRLF files
+trim() {
+    local s="$1"
+    s="${s#"${s%%[![:space:]]*}"}"
+    s="${s%"${s##*[![:space:]]}"}"
+    printf '%s' "$s"
+}
+
 SECRETS=()
 if [[ -f "$CONFIG_FILE" ]]; then
     while IFS= read -r line || [[ -n "$line" ]]; do
-        # Skip comments and blank/whitespace-only lines
-        [[ "$line" =~ ^[[:space:]]*# ]] && continue
-        [[ -z "${line// }" ]] && continue
-        SECRETS+=("$line")
+        line="$(trim "$line")"
+        [[ -z "$line" || "$line" == \#* ]] && continue
+        if [[ "$line" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+            SECRETS+=("$line")
+        else
+            echo "[hermes-gsm] WARNING: skipping invalid secret name: '$line'" >&2
+        fi
     done < "$CONFIG_FILE"
 else
     echo "[hermes-gsm] ERROR: Config file not found: $CONFIG_FILE" >&2
@@ -62,12 +73,17 @@ fi
 echo "[hermes-gsm] Fetching secrets from Google Secret Manager..."
 
 for secret_name in "${SECRETS[@]}"; do
-    value=$(gcloud secrets versions access latest \
-        --secret="$secret_name" 2>/dev/null) || {
+    value="$(gcloud secrets versions access latest \
+        --secret="$secret_name" 2>/dev/null)" || {
         echo "[hermes-gsm] WARNING: Could not fetch secret '$secret_name' — skipping"
         continue
     }
-    export "$secret_name"="$value"
+    value="${value%$'\r'}"   # strip CR if the value carries one
+    if [[ -z "$value" ]]; then
+        echo "[hermes-gsm] WARNING: secret '$secret_name' is empty — skipping"
+        continue
+    fi
+    export "$secret_name=$value"
     echo "[hermes-gsm]   OK $secret_name loaded"
 done
 

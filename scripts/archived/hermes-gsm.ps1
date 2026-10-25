@@ -28,7 +28,7 @@ if (Test-Path $configFile) {
     exit 1
 }
 
-$hermesPath = "C:\Users\e4dev\AppData\Local\hermes\hermes-agent\venv\Scripts\hermes.exe"
+$pythonExe = "C:\Users\e4dev\AppData\Local\hermes\hermes-agent\venv\Scripts\python.exe"
 
 # ── Fetch secrets from GSM ─────────────────────────────────────
 Write-Host "[hermes-gsm] Fetching secrets from Google Secret Manager..." -ForegroundColor Cyan
@@ -42,16 +42,26 @@ foreach ($secret in $secrets) {
             [Environment]::SetEnvironmentVariable($secret, $value, "Process")
             Write-Host "[hermes-gsm]   OK $secret loaded" -ForegroundColor Green
         } else {
-            Write-Host "[hermes-gsm]   WARN Could not fetch '$secret' — skipping" -ForegroundColor Yellow
+            Write-Host "[hermes-gsm]   WARN Could not fetch '$secret' - skipping" -ForegroundColor Yellow
         }
     } catch {
-        Write-Host "[hermes-gsm]   WARN Could not fetch '$secret' — $_" -ForegroundColor Yellow
+        Write-Host "[hermes-gsm]   WARN Could not fetch '$secret' - $_" -ForegroundColor Yellow
     }
+}
+
+# ── Check if Headroom proxy is running on port 8787 ────────────
+$proxyRunning = Get-NetTCPConnection -LocalPort 8787 -ErrorAction SilentlyContinue
+if ($proxyRunning) {
+    Write-Host "[hermes-gsm] Headroom proxy detected on port 8787. Routing requests through proxy to save tokens." -ForegroundColor Cyan
+    $env:DEEPSEEK_BASE_URL = "http://localhost:8787/v1"
+    $env:GEMINI_BASE_URL = "http://localhost:8787/v1beta"
+} else {
+    Write-Host "[hermes-gsm] Headroom proxy not detected on port 8787. Direct connection will be used." -ForegroundColor DarkGray
 }
 
 Write-Host "[hermes-gsm] Launching Hermes..." -ForegroundColor Cyan
 Write-Host ""
 
 # ── Launch Hermes ──────────────────────────────────────────────
-& $hermesPath @args
+& $pythonExe -m hermes_cli.main @args
 exit $LASTEXITCODE

@@ -1,29 +1,42 @@
 # Hermes GSM Launchers
 
-A set of wrapper scripts to launch the **Hermes CLI** automatically fetching API keys from **Google Secret Manager (GSM)**.
+Launchers for the **Hermes CLI**, paired with the `gsm` secret-source plugin that
+pulls API keys from **Google Secret Manager (GSM)**.
 
-This prevents storing sensitive API keys in local environment variables or `.env` files.
+The keys are fetched by Hermes itself at the start of every process and kept in
+memory only — they are never written to `.env` or to any other file on disk.
+
+> **How it works in depth** (root cause of the change, the Python plugin,
+> startup timing, security model, troubleshooting): **[`GSM-PLUGIN.md`](GSM-PLUGIN.md)**
 
 ## Prerequisites
 
 1.  **Google Cloud SDK (gcloud):** Must be installed and available in your `PATH`.
-2.  **Authentication:** You must be authenticated with Google Cloud. Run:
+2.  **Authentication:** The `gcloud` CLI is what reads the secrets, so authenticate it with your own user credentials (not ADC):
     ```bash
-    gcloud auth application-default login
+    gcloud auth login
+    gcloud config set project <your-project-id>
     ```
 3.  **Secrets in GSM:** Ensure you have the required secrets (e.g., `DEEPSEEK_API_KEY`) created in your Google Cloud Project and that your account has the `Secret Manager Secret Accessor` role.
+4.  **The `gsm` plugin enabled:** secrets are injected by Hermes itself, not by the launchers:
+    ```bash
+    hermes plugins enable gsm
+    hermes config set secrets.gsm.enabled true
+    hermes config set secrets.gsm.secrets_file C:/workspace/hermes/scripts/gsm-secrets.conf
+    ```
 
 ## Included Scripts
 
 | Platform | Script | Shell |
 | :--- | :--- | :--- |
-| **Windows** | `hermes-gsm.cmd` | Command Prompt (CMD) |
-| **Windows** | `hermes-gsm.ps1` | PowerShell |
-| **Linux / macOS / Windows (Git Bash)** | `hermes-gsm.sh` | Bash |
-| **Linux / macOS** | `hermes-gsm-ubuntu.sh` | Bash |
-| **Any (helper)** | `hermes-gsm-gcloud-logout.sh` | Bash |
+| **Windows** | `hermes-gsm-git-bash-win-deepseek.sh` | Git Bash / MSYS2 (active launcher) |
+| Windows / Linux | `hermes-gsm.cmd`, `.ps1`, `.sh`, `-ubuntu.sh`, `hermes-gsm-gcloud-logout.sh` | CMD / PowerShell / Bash — legacy launchers, moved to `scripts/archived/` |
 
 ## Auto-Logout (gcloud session)
+
+> Applies to the **legacy** launchers in `scripts/archived/`. The active launcher
+> no longer runs `gcloud` itself (the `gsm` plugin does, once per Hermes process),
+> so there is no session for it to schedule.
 
 `hermes-gsm-ubuntu.sh` schedules a background job that closes the gcloud
 session shortly after launch, so the credentials used to fetch secrets from
@@ -55,14 +68,13 @@ To use a shorter command (like `hermes`), add the following to your shell profil
 
 **PowerShell (`$PROFILE`):**
 ```powershell
-function hermes { & "C:\workspace\hermes\scripts\hermes-gsm.ps1" @args }
+# 'bash' on PATH may be WSL on this host — name Git Bash explicitly.
+function hermes { & "C:\Program Files\Git\bin\bash.exe" "C:/workspace/hermes/scripts/hermes-gsm-git-bash-win-deepseek.sh" @args }
 ```
 
 **Bash (`~/.bashrc` or `~/.zshrc`):**
 ```bash
-alias hermes='/path/to/hermes-gsm.sh'
-
-e.g = /c/workspace/hermes/scripts/hermes-gsm.sh
+alias hermes='bash /c/workspace/hermes/scripts/hermes-gsm-git-bash-win-deepseek.sh'
 ```
 
 ## Usage
@@ -74,7 +86,7 @@ You can pass any Hermes CLI arguments directly to the scripts.
 hermes-gsm
 
 # Single query mode
-hermes-gsm -q "Explain quantum entanglement"
+hermes-gsm -z "Explain quantum entanglement"
 
 # Resume a previous session
 hermes-gsm --resume my-session-id
@@ -82,9 +94,12 @@ hermes-gsm --resume my-session-id
 
 ## Configuration
 
-All three scripts read their secret names from a single flat-file config: **`gsm-secrets.conf`**
+Secret names live in a single flat-file config: **`gsm-secrets.conf`**, next to the scripts.
 
-To add or remove API keys, edit that file — one secret name per line:
+**Hermes reads it, not the launchers.** The `gsm` secret-source plugin pulls each name
+from Google Secret Manager at the start of *every* Hermes process — CLI, the long-running
+gateway, and cron alike — so the keys reach the process that actually talks to the model
+(the gateway never sees a launcher's environment variables).
 
 ```
 # ── API Keys from Google Secret Manager ──
@@ -94,13 +109,26 @@ NOVITA_API_KEY
 # GOOGLE_API_KEY       # commented out — won't be fetched
 ```
 
-- Lines starting with `#` are comments (ignored)
-- Blank lines are ignored
-- Changes take effect on next launch — no need to touch the scripts themselves
+- Lines starting with `#` are comments (blank lines are ignored)
+- Each name must be a legal environment-variable name: it is both the GSM secret id
+  and the env var it supplies
+- Changes take effect on the next Hermes start — the plugin re-reads the file once per process
 
-> **Note:** The scripts assume Hermes is installed at:
-> `C:\Users\e4dev\AppData\Local\hermes\hermes-agent\venv\Scripts\hermes.exe`
-> If your installation path is different, update the `HERMES_EXE` / `HERMES_PATH` variable inside each script.
+Plugin keys it honours (all under `secrets.gsm` in `config.yaml`):
+
+| Key | Default | Meaning |
+| :--- | :--- | :--- |
+| `enabled` | `false` | Master switch |
+| `secrets_file` | `''` | Path to the flat file above |
+| `secrets` | `[]` | Inline list of ids, merged with `secrets_file` |
+| `project_id` | `''` | GCP project; empty = gcloud's active project |
+| `binary_path` | `''` | Path to `gcloud`; empty = `PATH` |
+| `cache_ttl_seconds` | `0` | `0` keeps keys off disk; raise it to skip the ~2.5s `gcloud` round-trip (values then cache `0600` under `~/.hermes/cache/` for that long) |
+| `override_existing` | `true` | GSM values win over `.env`/shell values, so rotation applies |
+
+> **Note:** the launcher runs Hermes through its venv Python:
+> `C:\Users\e4dev\AppData\Local\hermes\hermes-agent\venv\Scripts\python.exe -m hermes_cli.main`
+> If your installation path is different, update the `PYTHON_EXE` variable inside the script.
 
 ## Global VS Code Integration
 
@@ -118,7 +146,8 @@ Append the following JSON payload into your global tasks configuration:
         {
             "label": "Launch Hermes with GSM",
             "type": "shell",
-            "command": "C:/workspace/hermes/scripts/hermes-gsm.cmd",
+            "command": "C:/Program Files/Git/bin/bash.exe",
+            "args": ["C:/workspace/hermes/scripts/hermes-gsm-git-bash-win-deepseek.sh"],
             "options": {
                 "cwd": "${workspaceFolder}"
             },
