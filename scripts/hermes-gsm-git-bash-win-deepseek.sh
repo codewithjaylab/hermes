@@ -37,6 +37,17 @@ else
     echo "[hermes-gsm] Headroom proxy not detected on port 8787. Direct connection will be used."
 fi
 
+# ── Reload the gateway if the config changed after it started ──
+# Hermes reads config.yaml / gsm-secrets.conf once per process, so a
+# running gateway wouldn't see edits made after its launch (README →
+# "Reloading the gateway"). The check's stdout is silenced; failures
+# still surface on stderr.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if "$SCRIPT_DIR/hermes-gateway-reload.sh" status >/dev/null; then
+    echo "[hermes-gsm] Config changed after the gateway started — reloading it..."
+    "$SCRIPT_DIR/hermes-gateway-reload.sh"
+fi
+
 echo "[hermes-gsm] Launching Hermes..."
 echo ""
 

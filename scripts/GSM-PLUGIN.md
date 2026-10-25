@@ -1105,7 +1105,9 @@ secret-source backends".
 
 Los cambios de `config.yaml`/`gsm-secrets.conf` se leen una vez por proceso.
 Para el daemon vivo: `hermes plugins enable/disable` (recarga en caliente) o
-`hermes gateway restart`.
+`hermes gateway restart`. Atajo: `scripts/hermes-gateway-reload.sh` compara el
+mtime de la config con la hora de arranque del gateway y lo reinicia si está
+obsoleta (ver README → *Reloading the gateway*).
 
 ### 14.6 Fuente única de nombres = intencionada
 
