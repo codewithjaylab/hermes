@@ -25,6 +25,47 @@ memory only — they are never written to `.env` or to any other file on disk.
     hermes config set secrets.gsm.secrets_file C:/workspace/hermes/scripts/gsm-secrets.conf
     ```
 
+## Headless support (`browser` and `computer_use` toolsets)
+
+On machines without a desktop, `hermes-gsm-ubuntu.sh` brings up the virtual
+display and accessibility infrastructure the GUI tools need:
+
+- **Xvfb** on `:99` (1920x1080x24) -> `DISPLAY` for `computer_use`.
+- **Own D-Bus session + AT-SPI bus** -> UI inspection for `cua-driver`.
+- Skipped when `DISPLAY` is already set (real desktop).
+
+Controls:
+
+```bash
+HERMES_XVFB_DISPLAY=":98"   # use another display number
+HERMES_XVFB_DISPLAY=off     # never start Xvfb
+```
+
+Host dependencies (once, needs sudo):
+
+```bash
+sudo apt-get install -y xvfb x11-utils dbus-x11 at-spi2-core \
+    libatk1.0-0t64 libatk-bridge2.0-0t64 libatspi2.0-0t64 libgbm1 \
+    libxdamage1 libxcomposite1 libxrandr2 libxfixes3 libcups2t64 \
+    libdrm2 libasound2t64 libnss3 libnspr4 libpango-1.0-0 libcairo2 \
+    libxkbcommon0 libxshmfence1
+```
+
+For the `browser` toolset (Chromium managed by `agent-browser`):
+
+```bash
+npx -y agent-browser@^0.26.0 install     # installs Chrome into ~/.agent-browser
+ln -sf ~/.agent-browser/browsers/chrome-*/chrome ~/.local/bin/chromium
+```
+
+Verify:
+
+```bash
+hermes computer-use doctor     # should report "ok"
+```
+
+
+
 ## Included Scripts
 
 | Platform | Script | Shell |
