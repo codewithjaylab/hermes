@@ -20,7 +20,7 @@
 | Origen de las API keys | **plugin `gsm`** → `gcloud` → GSM (`brave-monitor-498704-c0`) | funcionando, verificado |
 | Modelo / proveedor | `deepseek-v4-flash` / `deepseek` (`key_env: DEEPSEEK_API_KEY`) | key llega desde GSM |
 | Gateway | `hermes gateway run`, WhatsApp **connected** (PID 16776 al cerrar este doc) | `127.0.0.1:3000` (bridge Baileys) |
-| Vigilante | tarea `HermesGatewayWatchdog`, cada 1 min | revive el gateway solo (`wake.log`) |
+| Vigilante | tarea `HermesGatewayWatchdog`, cada 3 min, sin ventana | revive el gateway solo (`wake.log`) |
 | Prueba del source | `scripts/verify-gsm-source.py` | `[OK] gsm: applied=['DEEPSEEK_API_KEY']` |
 
 Regla mental: **el `.env` define configuración; el plugin `gsm` define credenciales.**
@@ -370,7 +370,10 @@ un mensaje de WhatsApp no puede llegar a un Hermes caído. La solución tiene do
 
 **a) Vigilante automático (la que garantiza la resurrección).**
 `scripts/hermes-wake.py` (+ `hermes-wake.bat`) revisa cada invocación si el gateway está sano
-y, si no, lo arranca. Está registrado como tarea de Windows que corre **cada minuto**:
+y, si no, lo arranca. Está registrado como tarea de Windows que corre **cada 3 minutos** y
+sin ventana: la tarea no ejecuta el `.bat` (eso hacía parpadear una consola de `cmd` cada
+vez), sino `wscript.exe //B //Nologo hermes-wake-hidden.vbs`, un lanzador generado por
+`--install-task` que arranca `hermes-wake.py` con `pythonw.exe` y ventana oculta.
 
 ```
 schtasks /Query /TN HermesGatewayWatchdog /V /FO LIST
@@ -442,7 +445,7 @@ de arriba.
 - `gcloud auth list` → `devopsmentor.io@gmail.com` activa; `config get-value project` →
   `brave-monitor-498704-c0`; `secrets list` → 8 secretos (nombres en §5.4).
 - Gateway: PID 16776, `platforms.whatsapp.state = connected`, bridge en `127.0.0.1:3000`.
-- Tarea `HermesGatewayWatchdog`: `Last Result: 0`, corre cada minuto; prueba de resurrección
+- Tarea `HermesGatewayWatchdog`: `Last Result: 0`, corre cada 3 min sin ventana; prueba de resurrección
   real con gateway tumbado → `UP` en 12 s (§6.5).
 - `check-hermes-gateway.py` → `Veredicto: UP · PID 16776` (5/5 checks OK).
 - `cache/gsm_cache.json`: **no existe** (TTL 0 ⇒ sin caché en disco, como se espera).

@@ -6,7 +6,7 @@ rem  Uso:
 rem    hermes-wake.bat                 un chequeo y, si hace falta, levanta
 rem    hermes-wake.bat --dry-run       solo dice que haria
 rem    hermes-wake.bat --watch         vigilante residente (Ctrl+C para salir)
-rem    hermes-wake.bat --install-task  lo registra cada minuto (Programador)
+rem    hermes-wake.bat --install-task  lo registra cada 3 min, sin ventana (Programador)
 rem    hermes-wake.bat --uninstall-task
 rem    hermes-wake.bat --message       ademas intenta despertar leyendo WhatsApp
 rem  Agregar  pause  como ultimo argumento para que espere tecla (doble clic).

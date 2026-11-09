@@ -3,6 +3,21 @@
 Notable changes to the files in `C:\workspace\hermes\scripts`
 (launchers, `gsm-secrets.conf`, and their docs).
 
+## 2026-11-08
+
+### Changed
+
+- **Watchdog del gateway sin ventana y cada 3 min.** La tarea
+  `HermesGatewayWatchdog` ejecutaba `hermes-wake.bat` cada minuto, y cada
+  disparo hacía parpadear una consola de `cmd` + `python.exe`. Ahora
+  `--install-task` genera `hermes-wake-hidden.vbs` y registra la tarea como
+  `wscript.exe //B //Nologo hermes-wake-hidden.vbs`: el `.vbs` arranca
+  `hermes-wake.py --quiet` con `pythonw.exe` y ventana oculta, así no aparece
+  ninguna consola. El intervalo por defecto de `--task-interval` pasa de 1 a
+  3 minutos. Verificado: tarea recreada (`Repeat: 3 min`), corrida manual y
+  automática (21:31:01, 21:34) con `Last Result: 0` y línea nueva en
+  `cache/wake.log` sin procesos `cmd.exe` visibles.
+
 ## 2026-10-25
 
 ### Added

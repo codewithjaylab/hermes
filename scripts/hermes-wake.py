@@ -349,25 +349,46 @@ def cycle(home: Path, args, log: Log) -> int:
 # Programador de tareas (Windows)
 # --------------------------------------------------------------------------- #
 TASK_NAME = "HermesGatewayWatchdog"
+VBS_NAME = "hermes-wake-hidden.vbs"
+
+# El Programador de tareas lanza este .vbs: wscript no abre ventana y el .vbs
+# arranca pythonw, así el chequeo periódico no hace parpadear ninguna consola.
+VBS_LAUNCHER = r"""' hermes-wake-hidden.vbs - generado por hermes-wake.py --install-task
+' Lanza hermes-wake.py con pythonw (sin ventana de consola). No editar a mano.
+Option Explicit
+Dim fso, sh, here, python, script, cmd
+Set fso = CreateObject("Scripting.FileSystemObject")
+Set sh = CreateObject("WScript.Shell")
+here = fso.GetParentFolderName(WScript.ScriptFullName)
+script = here & "\hermes-wake.py"
+python = sh.ExpandEnvironmentStrings("%LOCALAPPDATA%") & "\hermes\hermes-agent\venv\Scripts\pythonw.exe"
+If Not fso.FileExists(python) Then python = "pythonw.exe"
+cmd = Chr(34) & python & Chr(34) & " " & Chr(34) & script & Chr(34) & " --quiet"
+' 0 = ventana oculta, False = no esperar a que termine
+sh.Run cmd, 0, False
+"""
+
+
+def write_hidden_launcher(script: Path) -> Path:
+    vbs = script.parent / VBS_NAME
+    vbs.write_text(VBS_LAUNCHER, encoding="utf-8")
+    return vbs
 
 
 def install_task(script: Path, interval_minutes: int) -> int:
     if os.name != "nt":
         print("--install-task solo aplica a Windows")
         return 1
-    # schtasks no ejecuta .py directamente: preferir el .bat hermano
-    target = script
-    if target.suffix.lower() == ".py":
-        bat = target.with_suffix(".bat")
-        if bat.exists():
-            target = bat
-    tr = f'"{target}"'
+    vbs = write_hidden_launcher(script)
+    # wscript.exe //B //Nologo <vbs> → sin consola, sin banner
+    tr = f'wscript.exe //B //Nologo "{vbs}"'
     cmd = ["schtasks", "/Create", "/SC", "MINUTE", "/MO", str(interval_minutes),
            "/TN", TASK_NAME, "/TR", tr, "/F"]
     proc = subprocess.run(cmd, capture_output=True, text=True)  # noqa: S603
     print((proc.stdout or proc.stderr).strip())
     if proc.returncode == 0:
-        print(f"Tarea '{TASK_NAME}' creada: cada {interval_minutes} min.")
+        print(f"Tarea '{TASK_NAME}' creada: cada {interval_minutes} min, sin ventana "
+              f"(lanzador: {vbs.name}).")
     return proc.returncode
 
 
@@ -393,7 +414,8 @@ def main() -> int:
     ap.add_argument("--quiet", action="store_true", help="sin salida por consola (solo log)")
     ap.add_argument("--install-task", action="store_true", help="registra tarea cada N minutos")
     ap.add_argument("--uninstall-task", action="store_true")
-    ap.add_argument("--task-interval", type=int, default=1)
+    ap.add_argument("--task-interval", type=int, default=3,
+                    help="minutos entre chequeos de la tarea programada (default 3)")
     args = ap.parse_args()
 
     if args.install_task:
