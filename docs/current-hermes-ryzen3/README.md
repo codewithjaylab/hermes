@@ -19,7 +19,8 @@
 | Plugins instalados | `~/.hermes\plugins\` | `gsm` (local, 1.0.0) y `homeassistant` (catálogo oficial, 2.0.1) |
 | Origen de las API keys | **plugin `gsm`** → `gcloud` → GSM (`brave-monitor-498704-c0`) | funcionando, verificado |
 | Modelo / proveedor | `deepseek-v4-flash` / `deepseek` (`key_env: DEEPSEEK_API_KEY`) | key llega desde GSM |
-| Gateway | PID 28080, `hermes gateway run`, WhatsApp **connected** | `127.0.0.1:3000` (bridge Baileys) |
+| Gateway | `hermes gateway run`, WhatsApp **connected** (PID 16776 al cerrar este doc) | `127.0.0.1:3000` (bridge Baileys) |
+| Vigilante | tarea `HermesGatewayWatchdog`, cada 1 min | revive el gateway solo (`wake.log`) |
 | Prueba del source | `scripts/verify-gsm-source.py` | `[OK] gsm: applied=['DEEPSEEK_API_KEY']` |
 
 Regla mental: **el `.env` define configuración; el plugin `gsm` define credenciales.**
@@ -35,7 +36,7 @@ C:\Users\e4dev\AppData\Local\hermes\        ← HERMES_HOME
 ├── config.yaml            configuración (modelo, plugins, secrets, plataformas)
 ├── .env                   20 variables; sin API keys
 ├── auth.json              credenciales OAuth (Nous); no se usa para DeepSeek
-├── gateway.pid            {"pid": 28080, "kind": "hermes-gateway", ...}
+├── gateway.pid            {"pid": 16776, "kind": "hermes-gateway", ...}
 ├── gateway_state.json     platforms.whatsapp.state = "connected"
 ├── hermes-agent\          código + venv\Scripts\python.exe (3.11.15)
 ├── plugins\
@@ -59,7 +60,8 @@ Hay **dos caminos de arranque** y conviene no confundirlos:
    resuelve por el **secret source del plugin**. Por eso el plugin no es un adorno: es la
    única vía que cubre gateway y cron.
 
-> En esta máquina el gateway corre con PID 28080 y WhatsApp conectado. El editor de
+> En esta máquina el gateway corre con WhatsApp conectado (PID 16776 al escribir esto) y la
+> tarea `HermesGatewayWatchdog` lo levanta sola si se cae (§6.5). El editor de
 > configuración es `hermes config edit` (no editar `config.yaml` desde una sesión de agente:
 > las herramientas de archivo lo rechazan a propósito).
 
@@ -361,6 +363,57 @@ Casos que sí detecta (probados): PID muerto con pidfile presente → `DOWN` exi
 cerrado → `DOWN`; `/health` que no responde pero puerto abierto → `DEGRADED`; plataforma en
 `reconnecting` → `DEGRADED`.
 
+### 6.5 Resurrección: levantar el gateway solo (watchdog + despertar por WhatsApp)
+
+Como el bridge Baileys es **hijo del gateway**, si el gateway muere también muere el canal:
+un mensaje de WhatsApp no puede llegar a un Hermes caído. La solución tiene dos capas:
+
+**a) Vigilante automático (la que garantiza la resurrección).**
+`scripts/hermes-wake.py` (+ `hermes-wake.bat`) revisa cada invocación si el gateway está sano
+y, si no, lo arranca. Está registrado como tarea de Windows que corre **cada minuto**:
+
+```
+schtasks /Query /TN HermesGatewayWatchdog /V /FO LIST
+```
+
+| Modo | Qué hace |
+|---|---|
+| `--once` (default) | un chequeo; si está caído, lo levanta. Es lo que corre la tarea. |
+| `--watch` | bucle residente cada `--interval` s (alternativa a la tarea) |
+| `--message` | además intenta despertar "por WhatsApp" (ver b) |
+| `--dry-run` | dice qué haría, sin ejecutar |
+| `--install-task` / `--uninstall-task` | registra/borra la tarea `HermesGatewayWatchdog` |
+
+Salvaguardas: **nunca** toca un gateway sano; cooldown de 120 s entre intentos (evita dobles
+arranques cuando la tarea y el test coinciden); lockfile; bitácora en `cache/wake.log` y la
+salida del arranque en `cache/wake-gateway-stdout.log`. El comando de arranque es
+`python -m hermes_cli.main gateway run --replace` en segundo plano.
+
+**b) Despertar por mensaje (`--message`).** Si el bridge sobrevivió al gateway, el script
+levanta un bridge suelto (o usa el que quedó vivo), drena `GET /messages`, contesta en el chat
+"Hermes estaba caído, lo estoy levantando" y arranca el gateway; antes de arrancar mata su
+bridge para dejar libre el puerto 3000. Si el bridge murió (caso normal), esta vía no aplica:
+el mensaje se pierde, pero WhatsApp **reentrega los no leídos** al reconectar y el vigilante
+levanta el gateway en ≤1 minuto.
+
+**Prueba real (2026-11-08, `cache/wake-test.log`):**
+
+```
+18:16:12  prueba de resurrección (pid antes: 12404)
+18:16:18  gateway tumbado (PID 12404 ya no existe)     ← taskkill deliberado
+18:16:54  gateway caído: PID 12404 muerto
+18:16:54  arrancando gateway → lanzado PID 15688
+18:17:06  gateway arriba: PID 16776 running            ← 12 s después
+18:17:01  (la tarea horaria también disparó, pero el cooldown la frenó: "faltan 112s")
+```
+
+Estado final: `UP · PID 16776`, `whatsapp=connected`, bridge `/health` 200.
+
+**Límites honestos:** la tarea corre como el usuario y solo con sesión iniciada (Hermes es una
+app de escritorio); si el usuario cierra sesión en Windows no hay vigilante. Tampoco arregla
+un gateway que esté vivo pero atascado con un canal roto: eso se ve como `DEGRADED` en
+`check-hermes-gateway.py` y se resuelve con `hermes gateway restart`.
+
 ---
 
 ## 7. Problemas conocidos y cómo se diagnosticaron
@@ -388,12 +441,15 @@ de arriba.
 - `verify-gsm-source.py` → `[OK] gsm: applied=['DEEPSEEK_API_KEY']`, binario `gcloud.CMD`.
 - `gcloud auth list` → `devopsmentor.io@gmail.com` activa; `config get-value project` →
   `brave-monitor-498704-c0`; `secrets list` → 8 secretos (nombres en §5.4).
-- Gateway: PID 28080, `platforms.whatsapp.state = connected`, bridge en `127.0.0.1:3000`.
+- Gateway: PID 16776, `platforms.whatsapp.state = connected`, bridge en `127.0.0.1:3000`.
+- Tarea `HermesGatewayWatchdog`: `Last Result: 0`, corre cada minuto; prueba de resurrección
+  real con gateway tumbado → `UP` en 12 s (§6.5).
+- `check-hermes-gateway.py` → `Veredicto: UP · PID 16776` (5/5 checks OK).
 - `cache/gsm_cache.json`: **no existe** (TTL 0 ⇒ sin caché en disco, como se espera).
 
 ## 9. Pendientes / límites
 
-- El gateway en curso (PID 28080) arrancó **antes** de corregir `gsm-secrets.conf`; el próximo
+- El gateway en curso arrancó **antes** de corregir `gsm-secrets.conf`; el próximo
   `hermes gateway restart` aplica la corrección (hasta entonces sigue con lo que tenía en
   memoria).
 - `secrets.gsm.project_id` está vacío a propósito: usa el proyecto activo de gcloud. Si se
