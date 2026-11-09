@@ -327,6 +327,40 @@ gcloud.cmd config get-value project                                     # brave-
 gcloud.cmd secrets list --format="value(name)"                          # nombres, sin valores
 ```
 
+### 6.4 ¿El gateway está corriendo, sí o sí?
+
+`scripts/check-hermes-gateway.py` (+ wrapper `check-hermes-gateway.bat`) valida las cinco
+señales que separan "proceso vivo" de "gateway sano": pidfile, proceso real (y que su línea
+de comando sea la del gateway), `gateway_state.json`, estado de cada plataforma y el
+`/health` del bridge local.
+
+```bash
+scripts\check-hermes-gateway.bat                 # resumen legible
+scripts\check-hermes-gateway.bat --json          # para cron/scripts
+scripts\check-hermes-gateway.bat --quiet         # imprime UP / DEGRADED / DOWN
+scripts\check-hermes-gateway.bat pause           # igual y espera tecla (doble clic)
+```
+
+Códigos de salida: `0` = UP, `1` = DOWN, `2` = DEGRADED (avisos: bridge a medio levantar,
+plataforma reconectando, heartbeat viejo). No imprime secretos.
+
+Salida real (2026-11-09):
+
+```
+Hermes gateway — C:\Users\e4dev\AppData\Local\hermes
+  [OK  ] pidfile      pid=12404 kind=hermes-gateway
+  [OK  ] proceso      PID 12404 vivo · python.exe · gateway run
+  [OK  ] estado       running · heartbeat hace 29s
+  [OK  ] plataformas  whatsapp=connected
+  [OK  ] bridge       127.0.0.1:3000 /health 200 {"status":"connected","queueLength":0,...}
+
+Veredicto: UP · PID 12404
+```
+
+Casos que sí detecta (probados): PID muerto con pidfile presente → `DOWN` exit 1; puerto
+cerrado → `DOWN`; `/health` que no responde pero puerto abierto → `DEGRADED`; plataforma en
+`reconnecting` → `DEGRADED`.
+
 ---
 
 ## 7. Problemas conocidos y cómo se diagnosticaron
